@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'LoginScreen.dart';
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
@@ -30,19 +34,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
     'Organização das Mamas',
   ];
 
+  bool _loading = false;
 
-  void _register() {
+  void _register() async {
     if (_formKey.currentState!.validate()) {
-      // Simula sucesso de cadastro
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Cadastro realizado com sucesso!')),
-      );
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
+      final name = _nameController.text.trim();
 
-      // Redireciona para a tela de login
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => Loginscreen()),
-      );
+      setState(() => _loading = true);
+
+      try {
+        // Cria o usuário no Firebase Auth
+        final credential = await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(email: email, password: password);
+
+        final uid = credential.user!.uid;
+
+        // Verifica se o email é de um admin
+        final isAdmin = email == 'admin@hpc.com' || email == 'aguinaldo@igreja.org';
+
+        // Salva dados no Firestore
+        await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
+          'uid': uid,
+          'nome': name,
+          'email': email,
+          'igreja': _selectedIgreja,
+          'organismo': _selectedOrganismo,
+          'role': isAdmin ? 'admin' : 'user',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cadastro realizado com sucesso!')),
+        );
+
+        await Future.delayed(const Duration(seconds: 2));
+
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const Loginscreen()),
+        );
+      } on FirebaseAuthException catch (e) {
+        String msg = e.message ?? 'Erro ao cadastrar';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg)),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro inesperado: $e')),
+        );
+      }
+
+      setState(() => _loading = false);
     }
   }
 
@@ -51,163 +96,117 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(
-          'Cadastrar-se',
-          style: TextStyle(color: Colors.deepOrange),
-        ),
+        title: const Text('Cadastrar-se', style: TextStyle(color: Colors.deepOrange)),
         backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.deepOrange),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: 'Nome completo',
-                  labelStyle: TextStyle(color: Colors.grey),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.deepOrange),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.deepOrange, width: 4),
-                  )
-                ),
+                decoration: _buildInputDecoration('Nome completo'),
                 validator: (value) =>
                 value!.isEmpty ? 'Informe seu nome completo' : null,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  labelStyle: TextStyle(color: Colors.grey),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.deepOrange),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.deepOrange, width: 4),
-                    )
-                ),
+                decoration: _buildInputDecoration('Email'),
                 validator: (value) =>
                 value!.isEmpty ? 'Informe seu email' : null,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Senha',
-                  labelStyle: TextStyle(color: Colors.grey),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.deepOrange),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.deepOrange, width: 4),
-                    )
-                ),
+                decoration: _buildInputDecoration('Senha'),
                 obscureText: true,
                 validator: (value) => value!.length < 6
                     ? 'A senha deve ter pelo menos 6 caracteres'
                     : null,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _confirmPasswordController,
-                decoration: InputDecoration(
-                  labelText: 'Confirmar senha',
-                  labelStyle: TextStyle(color: Colors.grey),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.deepOrange),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.deepOrange, width: 4),
-                    )
-                ),
+                decoration: _buildInputDecoration('Confirmar senha'),
                 obscureText: true,
-                validator: (value) =>
-                value != _passwordController.text ? 'As senhas não coincidem' : null,
+                validator: (value) => value != _passwordController.text
+                    ? 'As senhas não coincidem'
+                    : null,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _selectedIgreja,
                 items: _igrejas
                     .map((igreja) =>
                     DropdownMenuItem(value: igreja, child: Text(igreja)))
                     .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedIgreja = value;
-                  });
-                },
-                decoration: InputDecoration(
-                  labelText: 'Distrito',
-                  labelStyle: TextStyle(color: Colors.grey),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.deepOrange),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.deepOrange, width: 4),
-                    )
-                ),
+                onChanged: (value) => setState(() => _selectedIgreja = value),
+                decoration: _buildInputDecoration('Distrito'),
+                validator: (value) =>
+                value == null ? 'Selecione uma igreja/distrito' : null,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _selectedOrganismo,
                 items: _organismos
-                    .map((org) => DropdownMenuItem(
-                  value: org,
-                  child: Text(org),
-                ))
+                    .map((org) =>
+                    DropdownMenuItem(value: org, child: Text(org)))
                     .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedOrganismo = value;
-                  });
-                },
-                decoration: InputDecoration(
-                  labelText: 'Ministério ou Organismos',
-                  labelStyle: TextStyle(color: Colors.grey),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.deepOrange),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.deepOrange, width: 4),
-                    )
-                ),
-                validator: (value) =>
-                value == null ? 'Selecione uma associação ou organismo' : null,
+                onChanged: (value) =>
+                    setState(() => _selectedOrganismo = value),
+                decoration: _buildInputDecoration('Ministério ou Organismos'),
+                validator: (value) => value == null
+                    ? 'Selecione uma associação ou organismo'
+                    : null,
               ),
-              SizedBox(height: 24),
-              ElevatedButton(
+              const SizedBox(height: 24),
+              _loading
+                  ? const CircularProgressIndicator()
+                  : ElevatedButton(
                 onPressed: _register,
-                child: Text(
-                  'Cadastrar',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: Colors.white,
-                  ),
-                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepOrange,
-                  minimumSize: Size(double.infinity, 50),
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                child: const Text(
+                  'Cadastrar',
+                  style: TextStyle(fontSize: 20, color: Colors.white),
                 ),
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               TextButton(
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (_) => Loginscreen()),
+                    MaterialPageRoute(builder: (_) => const Loginscreen()),
                   );
                 },
-                child: Text('Já tem uma conta? Fazer login',
-                style: TextStyle(color: Colors.deepOrange),),
+                child: const Text(
+                  'Já tem uma conta? Fazer login',
+                  style: TextStyle(color: Colors.deepOrange),
+                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  InputDecoration _buildInputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.grey),
+      enabledBorder: const OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.deepOrange),
+      ),
+      focusedBorder: const OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.deepOrange, width: 3),
       ),
     );
   }

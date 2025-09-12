@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../admin/AdminPanelScreen.dart';
 import '../widgets/Navegation.dart';
-import 'HomeScreen.dart';
 import 'RegisterScreen.dart';
 
 class Loginscreen extends StatefulWidget {
@@ -14,20 +15,73 @@ class Loginscreen extends StatefulWidget {
 class _LoginscreenState extends State<Loginscreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _loading = false;
 
-  void _login() {
+  void _login() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Por favor, preencha todos os campos')),
-      );
+      _showMessage('Por favor, preencha todos os campos');
       return;
     }
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => Navegation_Screen()),
+
+    setState(() => _loading = true);
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(user.uid)
+            .get();
+
+        if (!doc.exists) {
+          _showMessage('Usuário autenticado, mas os dados não estão completos. Entre em contato com o suporte.');
+          await FirebaseAuth.instance.signOut();
+          setState(() => _loading = false);
+          return;
+        }
+
+        final role = doc.data()?['role'];
+
+        if (role == 'admin') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const Navegation_Screen()),
+          );
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = switch (e.code) {
+        'user-not-found' => 'Usuário não encontrado.',
+        'wrong-password' => 'Senha incorreta.',
+        'invalid-email' => 'Email inválido.',
+        _ => 'Erro ao fazer login.',
+      };
+      _showMessage(message);
+    } catch (e) {
+      _showMessage('Erro inesperado. Tente novamente mais tarde.');
+      debugPrint('Login error: $e');
+    }
+
+    setState(() => _loading = false);
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 
@@ -36,21 +90,18 @@ class _LoginscreenState extends State<Loginscreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
         child: Center(
           child: SingleChildScrollView(
             child: Column(
               children: [
-                SizedBox(height: 10),
-                Center(
-                  child: Image.asset(
-                    'images/splashscreen.png',
-                    width: 250,
-                    height: 250,
-                    fit: BoxFit.contain,
-                  ),
+                const SizedBox(height: 10),
+                Image.asset(
+                  'images/splashscreen.png',
+                  width: 200,
+                  height: 200,
                 ),
-                Text(
+                const Text(
                   'IGREJA METODISTA UNIDA',
                   style: TextStyle(
                     fontSize: 24,
@@ -58,7 +109,7 @@ class _LoginscreenState extends State<Loginscreen> {
                     color: Colors.deepOrange,
                   ),
                 ),
-                Text(
+                const Text(
                   'HPCDIGITAL',
                   style: TextStyle(
                     fontSize: 24,
@@ -66,55 +117,32 @@ class _LoginscreenState extends State<Loginscreen> {
                     color: Colors.black,
                   ),
                 ),
-                SizedBox(height: 40),
+                const SizedBox(height: 40),
                 TextField(
                   controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email ou Telefone',
-                    labelStyle: TextStyle(color: Colors.grey), // label cinza
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20), // bordas ovais
-                      borderSide: BorderSide(color: Colors.red), // borda laranja
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20), // mantém oval no foco
-                      borderSide: BorderSide(color: Colors.red, width: 3), // borda mais destacada
-                    ),
-                  ),
+                  decoration: _buildInputDecoration('Email ou Telefone'),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 TextField(
                   controller: _passwordController,
-                  decoration: InputDecoration(
-                    labelText: 'Senha',
-                    labelStyle: TextStyle(color: Colors.grey), // label cinza
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20), // bordas ovais
-                      borderSide: BorderSide(color: Colors.red), // borda laranja
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20), // mantém oval no foco
-                      borderSide: BorderSide(color: Colors.red, width: 3), // borda mais destacada
-                    ),
-                  ),
                   obscureText: true,
+                  decoration: _buildInputDecoration('Senha'),
                 ),
-                SizedBox(height: 24),
-                ElevatedButton(
+                const SizedBox(height: 24),
+                _loading
+                    ? const CircularProgressIndicator()
+                    : ElevatedButton(
                   onPressed: _login,
-                  child: Text(
-                    'Entrar',
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.white,
-                    ),
-                  ),
                   style: ElevatedButton.styleFrom(
-                    minimumSize: Size(double.infinity, 50),
+                    minimumSize: const Size(double.infinity, 50),
                     backgroundColor: Colors.deepOrange,
                   ),
+                  child: const Text(
+                    'Entrar',
+                    style: TextStyle(fontSize: 20, color: Colors.white),
+                  ),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -122,13 +150,30 @@ class _LoginscreenState extends State<Loginscreen> {
                       MaterialPageRoute(builder: (_) => RegisterScreen()),
                     );
                   },
-                  child: Text('Não tem conta? Cadastrar-se', style: TextStyle(color: Colors.deepOrange),
+                  child: const Text(
+                    'Não tem conta? Cadastrar-se',
+                    style: TextStyle(color: Colors.deepOrange),
                   ),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  InputDecoration _buildInputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.grey),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: const BorderSide(color: Colors.red),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: const BorderSide(color: Colors.red, width: 3),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hpcdigital/screens/secoes/KikongoSection.dart';
 import 'package:hpcdigital/screens/secoes/KimbunduSection.dart';
 import 'package:hpcdigital/screens/secoes/UmbunduSection.dart';
 import 'secoes/PortuguesSection.dart';
@@ -16,6 +17,8 @@ class SecaoScreen extends StatelessWidget {
         return const KimbunduSection();
       case 'Umbundu':
         return const UmbunduSection();
+      case 'Kikongo':
+        return const KikongoSection();
       default:
         return Center(child: Text('Seção "$titulo" ainda não implementada.'));
     }
