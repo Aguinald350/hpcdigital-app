@@ -285,4 +285,156 @@ flutter test
 
 ---
 
+---
+
+## 📋 Status do Projeto (HPC Digital)
+
+### ✅ Já implementado
+
+- **Estrutura inicial Flutter + Firebase**  
+  - Integração `firebase_options.dart` (via FlutterFire CLI).
+  - Configurações Android/iOS previstas no README.
+  - `.gitignore` adequado.
+
+- **Git/GitHub — Fluxo com branches separados**  
+  - Branch padrão `main`.
+  - Convenções de nome para branches (`feature/`, `fix/`, etc.).
+  - Guia de rebase/merge e PRs.
+
+- **Hinos (Português)**
+  - Tela com **busca por número/título**.
+  - **Agrupamento por seção oficial**.
+  - **Ordenação numérica correta** dentro de cada seção.
+  - Tela de **detalhes do hino**.
+  - Telas de **admin**: cadastrar/editar hino.
+
+- **Eventos**
+  - Tela pública com **abas por categoria** + **calendário mensal** (TableCalendar).
+  - Marcadores em dias com evento e **lista filtrável por dia/mês**.
+  - Admin:
+    - **EventosScreenAdmin** com calendário e lista por mês.
+    - **EditarEventoScreen** separada (CRUD completo).
+    - Ações rápidas (editar/apagar) via menu.
+  - Ajustes para **evitar índices compostos** obrigatórios (filtrar categoria no cliente quando necessário).
+
+- **Admin Panel**
+  - Menus: **Cadastrar Hino**, **Ver Hinos**, **Eventos (cadastrar/gerir)**, **Minha Igreja**.
+  - **Minha Igreja (Admin)**:
+    - **Cadastrar Distrito** (nome).
+    - **Cadastrar Intendência** (nome + dropdown de distrito).
+    - **Cadastrar Igreja**:
+      - Nome da igreja.
+      - Nº de pastores → campos dinâmicos para **nomes** e **contactos**.
+      - **Secretário** (nome + contacto).
+      - **Dropdown de Intendência** (preenche distrito automaticamente).
+      - **Localização** (campo para URL do Google Maps ou geolocalização futura).
+  - **constants.dart**: fonte de verdade para listas (classes/eventos/status), evitando mismatch de dropdown.
+
+- **Minha Igreja (Usuário) — Navegação hierárquica**
+  - **Busca** por nome da igreja/ intendência.
+  - Lista **alfabética de distritos** → ao clicar, carrega **intendências** → ao clicar, carrega **igrejas**.
+  - Card da igreja com **nome, distrito, intendência, pastores + contactos, secretário + contacto** e área reservada para **mapa** (link/preview).
+
+- **Regras Firestore (esqueleto)**
+  - Collections: `hinos`, `usuarios`, `eventos`, `distritos`, `intendencias`, `igrejas`.
+  - Função `isAdmin()` e `isSignedIn()` (sugeridas) para gates de segurança.
+  - Observação sobre necessidade de **documento de usuário** com `role: "admin"`.
+
+- **Índices Firestore**
+  - Documentação/orientação para lidar com mensagens do console e **criar índices compostos** quando necessário.
+  - Alternativa implementada: **consultas por data** + filtro por categoria **no cliente** (evita índice composto).
+
+---
+
+### 🚧 Em andamento / A fazer
+
+- **Firestore Rules (endurecer e validar)**  
+  - Implementar `function isSignedIn()`.  
+  - Garantir `usuarios/{uid}` com `role: "admin"` para quem precisa.  
+  - Validar schemas (ex.: tipos de campos, datas, minimo/máximo de pastores) em `allow create/update` com `request.resource.data`.
+
+- **Índices Compostos**  
+  - Criar os que forem realmente necessários (usar links que aparecem no log do app).  
+  - Revisar consultas que fazem `where(...) + orderBy(...)` em campos diferentes.
+
+- **Minha Igreja (Usuário) — Mapa**
+  - **Embed visual** do mapa (ex.: `google_maps_flutter`) ou preview confiável do link do Maps.  
+  - Permissões de localização (se necessário para recursos futuros).  
+  - Tratamento de links do Maps e validação de URLs.
+
+- **Validações de formulário**
+  - Máscaras de telefone (ex.: `flutter_multi_formatter` ou `mask_text_input_formatter`).  
+  - Normalização e validação de links (Maps).  
+  - Limites de comprimento e mensagens de erro mais amigáveis.
+
+- **UX/Performance**
+  - **Paginação**/limites em listas grandes (ex.: hinos/eventos).  
+  - **Caching**/offline (Firestore `persistenceEnabled`).  
+  - **Shimmer/skeletons** durante carregamento.
+
+- **I18N / Locales**
+  - Garantir `initializeDateFormatting('pt_BR')` corretamente.  
+  - Traduzir strings estáticas via `intl`/`flutter_localizations`.
+
+- **Autenticação e papéis**
+  - Fluxo de login (Firebase Auth).  
+  - Tela/guarda para rotas **admin only**.  
+  - Onboarding simples para novos admins (criar doc `usuarios/{uid}`).
+
+- **Notificações (opcional)**
+  - Push (Firebase Cloud Messaging) para lembretes de eventos.
+
+- **Qualidade**
+  - `flutter analyze`, `dart fix --apply`.  
+  - Tests de UI/Widget para casos críticos.  
+  - Lints (`analysis_options.yaml`) mais estritos.
+
+- **CI/CD (futuro)**
+  - GitHub Actions para build/test.  
+  - Play Console (release) e configurações de assinatura.  
+  - Variáveis de ambiente/Secrets para chaves sensíveis.
+
+- **Backups & Migrações**
+  - Exportar coleções Firestore periodicamente.  
+  - Padronizar migrações de schema (scripts ou docs).
+
+---
+
+### 📌 Decisões anotadas
+
+- **Eventos:**
+  - Para evitar índices compostos, consultas por mês usam **apenas `data`**; filtro de `classe` é feito no cliente.  
+  - A aba **“Todos”** lista todas as classes daquele mês (e exibe a classe no card).
+
+- **Hinos:**
+  - Ordenação por `numero` é **numérica** (convertendo string→int quando preciso).  
+  - Na busca, mostra **título do hino** diretamente (mais prático).
+
+- **Arquitetura do Admin:**
+  - **Editar Evento** em tela separada (`EditarEventoScreen`) para organização e reuso.  
+  - **constants.dart** concentra listas (classes/status), evitando inconsistências com dropdowns.
+
+---
+
+### 🗂️ Estrutura de coleções (resumo)
+
+- `hinos` `{numero:int|string, titulo, secao, lingua, ...}`
+- `eventos` `{nome, descricao, data:Timestamp, classe, status, criadoEm}`
+- `usuarios` `{role:"admin"|"...", ...}`
+- `distritos` `{nome}`
+- `intendencias` `{nome, distritoId, distritoNome}`
+- `igrejas` `{nome, intendenciaId, intendenciaNome, distritoId, distritoNome, pastores:[{nome, contacto}], secretario:{nome, contacto}, localizacaoUrl}`
+
+---
+
+### 📣 Como o time deve trabalhar (resumo)
+
+1. **Atualize a main** (`git pull origin main`).  
+2. **Crie sua branch** (`feature/...`), trabalhe com commits pequenos.  
+3. **Rebase periódico** com `origin/main` para reduzir conflitos.  
+4. **Abra PR** → revisão do colega → merge.  
+5. **Nunca** desenvolva direto em `main`.
+
+
+
 
