@@ -1,5 +1,9 @@
+// lib/admin/editar_hino_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+
+// ⬇️ ajuste o caminho do seu shell
+import 'widgets/admin_shell.dart';
 
 class EditarHinoScreen extends StatefulWidget {
   final DocumentSnapshot hino;
@@ -47,10 +51,7 @@ class _EditarHinoScreenState extends State<EditarHinoScreen> {
     setState(() => _salvando = true);
 
     try {
-      await FirebaseFirestore.instance
-          .collection('hinos')
-          .doc(widget.hino.id)
-          .update({
+      await FirebaseFirestore.instance.collection('hinos').doc(widget.hino.id).update({
         'titulo': _tituloController.text.trim(),
         'numero': _numeroController.text.trim(),
         'conteudo': _conteudoController.text.trim(),
@@ -58,17 +59,19 @@ class _EditarHinoScreenState extends State<EditarHinoScreen> {
         'secao': _secaoController.text.trim(),
       });
 
-      Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Hino atualizado com sucesso')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao salvar alterações: $e')),
       );
+    } finally {
+      if (mounted) setState(() => _salvando = false);
     }
-
-    setState(() => _salvando = false);
   }
 
   Future<void> _excluirHino() async {
@@ -88,88 +91,94 @@ class _EditarHinoScreenState extends State<EditarHinoScreen> {
 
     try {
       await FirebaseFirestore.instance.collection('hinos').doc(widget.hino.id).delete();
-      Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Hino excluído com sucesso')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao excluir hino: $e')),
       );
     }
   }
 
-  InputDecoration _buildInput(String label) {
-    return InputDecoration(
-      labelText: label,
-      border: const OutlineInputBorder(),
-      focusedBorder: const OutlineInputBorder(
-        borderSide: BorderSide(color: Colors.deepOrange, width: 2),
-      ),
-    );
-  }
+  InputDecoration _buildInput(String label) => const InputDecoration(
+    labelText: '',
+  ).copyWith(
+    labelText: label,
+    border: const OutlineInputBorder(),
+    focusedBorder: const OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.deepOrange, width: 2),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Editar Hino'),
-        backgroundColor: Colors.deepOrange,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: _excluirHino,
-          )
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _tituloController,
-                decoration: _buildInput('Título'),
-                validator: (value) => value!.isEmpty ? 'Informe o título' : null,
+    return AdminShell(
+      title: 'Editar Hino',
+      currentIndex: 1, // índice do menu “Hinos”
+      actions: [
+        IconButton(
+          tooltip: 'Excluir',
+          onPressed: _excluirHino,
+          icon: const Icon(Icons.delete, color: Colors.white),
+        ),
+      ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                children: [
+                  TextFormField(
+                    controller: _tituloController,
+                    decoration: _buildInput('Título'),
+                    validator: (value) => value!.isEmpty ? 'Informe o título' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _numeroController,
+                    decoration: _buildInput('Número'),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _secaoController,
+                    decoration: _buildInput('Seção'),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _escritorController,
+                    decoration: _buildInput('Escritor'),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _conteudoController,
+                    maxLines: 8,
+                    decoration: _buildInput('Conteúdo'),
+                    validator: (value) => value!.isEmpty ? 'Informe o conteúdo' : null,
+                  ),
+                  const SizedBox(height: 24),
+                  _salvando
+                      ? const Center(child: CircularProgressIndicator())
+                      : ElevatedButton(
+                    onPressed: _salvarAlteracoes,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepOrange,
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    child: const Text(
+                      'Salvar Alterações',
+                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _numeroController,
-                decoration: _buildInput('Número'),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _secaoController,
-                decoration: _buildInput('Seção'),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _escritorController,
-                decoration: _buildInput('Escritor'),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _conteudoController,
-                maxLines: 8,
-                decoration: _buildInput('Conteúdo'),
-                validator: (value) => value!.isEmpty ? 'Informe o conteúdo' : null,
-              ),
-              const SizedBox(height: 24),
-              _salvando
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
-                onPressed: _salvarAlteracoes,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                child: const Text(
-                  'Salvar Alterações',
-                  style: TextStyle(fontSize: 18, color: Colors.white),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

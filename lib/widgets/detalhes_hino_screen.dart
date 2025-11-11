@@ -8,19 +8,23 @@ class DetalhesHinoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final numero = hino['numero'] ?? '';
-    final titulo = hino['titulo'] ?? 'Sem título';
-    final conteudo = hino['conteudo'] ?? 'Conteúdo indisponível';
-    final secao = hino['secao'] ?? 'Sem seção';
-    final escritor = hino['escritor'] ?? 'Desconhecido';
-    final lingua = hino['lingua'] ?? 'Idioma indefinido';
-    // final data = (hino['dataCriacao'] as Timestamp?)?.toDate(); // Removido para usuários
+    final cs = Theme.of(context).colorScheme;
+
+    final numero   = (hino['numero']   ?? '').toString();
+    final titulo   = (hino['titulo']   ?? 'Sem título').toString();
+    final conteudo = (hino['conteudo'] ?? 'Conteúdo indisponível').toString();
+    final secao    = (hino['secao']    ?? 'Sem seção').toString();
+    final escritor = (hino['escritor'] ?? 'Desconhecido').toString();
+    final lingua   = (hino['lingua']   ?? 'Idioma indefinido').toString();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detalhes do Hino'),
-        backgroundColor: Colors.deepOrange,
+        backgroundColor: cs.primary,
+        foregroundColor: cs.onPrimary,
+        elevation: 0,
       ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: ListView(
@@ -29,22 +33,48 @@ class DetalhesHinoScreen extends StatelessWidget {
               child: Text(
                 'Hino $numero - $titulo',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.deepOrange),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: cs.primary, // destaque pelo tema
+                ),
               ),
             ),
             const SizedBox(height: 16),
-            _buildItem('Idioma', lingua),
-            _buildItem('Seção', secao),
-            _buildItem('Escritor', escritor),
-            const Divider(height: 32),
-            const Text(
+
+            // “Ficha técnica”
+            _buildItem(context, 'Idioma', lingua),
+            _buildItem(context, 'Seção', secao),
+            _buildItem(context, 'Escritor', escritor),
+
+            const SizedBox(height: 8),
+            Divider(color: cs.secondary.withOpacity(0.35), height: 32),
+
+            Text(
               'Letra do Hino:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: cs.onBackground,
+              ),
             ),
             const SizedBox(height: 12),
-            Text(
-              conteudo,
-              style: const TextStyle(fontSize: 16, height: 1.5),
+
+            // bloco de conteúdo com leve contraste do tema
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: cs.secondaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                conteudo,
+                style: TextStyle(
+                  fontSize: 16,
+                  height: 1.5,
+                  color: cs.onSecondaryContainer,
+                ),
+              ),
             ),
           ],
         ),
@@ -52,18 +82,29 @@ class DetalhesHinoScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildItem(String label, String value) {
+  Widget _buildItem(BuildContext context, String label, String value) {
+    final cs = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('$label: ',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              color: cs.primary, // realce pelo tema
+            ),
+          ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 16),
+              style: TextStyle(
+                fontSize: 16,
+                color: cs.onBackground,
+              ),
             ),
           ),
         ],

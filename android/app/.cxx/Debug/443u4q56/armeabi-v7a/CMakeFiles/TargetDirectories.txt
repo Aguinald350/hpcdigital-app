@@ -1,0 +1,2 @@
+C:/Users/DELL/hpcdigital/android/app/.cxx/Debug/443u4q56/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/DELL/hpcdigital/android/app/.cxx/Debug/443u4q56/armeabi-v7a/CMakeFiles/rebuild_cache.dir

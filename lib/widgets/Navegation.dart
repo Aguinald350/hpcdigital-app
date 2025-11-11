@@ -1,87 +1,3 @@
-////////////Modelo 1////////////////////////////
-// import 'package:flutter/material.dart';
-// import '../screens/EventosScreen.dart';
-// import '../screens/Hinario_Screen.dart';
-// import '../screens/MoreScreen.dart';
-// import '../screens/Prefacio_Screen.dart';
-// import '../screens/churchScreen.dart';
-// import '/screens/HomeScreen.dart';
-//
-// class Navegation_Screen extends StatefulWidget {
-//   const Navegation_Screen({super.key});
-//
-//   @override
-//   State<Navegation_Screen> createState() => _Navegation_ScreenState();
-// }
-//
-// int _currentIndex = 0;
-// class _Navegation_ScreenState extends State<Navegation_Screen> {
-//   late PageController pageController;
-//
-//   @override
-//   void initState() {
-//     super.initState();
-//     pageController = PageController();
-//   }
-//
-//   @override
-//   void dispose() {
-//     pageController.dispose();
-//     super.dispose();
-//   }
-//
-//   void onPageChanged(int page) {
-//     setState(() {
-//       _currentIndex = page;
-//     });
-//   }
-//
-//   void navigationTapped(int page) {
-//     pageController.jumpToPage(page);
-//   }
-//
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       bottomNavigationBar: BottomNavigationBar(
-//         backgroundColor: Colors.deepOrange,
-//        //backgroundColor: const Color(0xFF071013),
-//         type: BottomNavigationBarType.fixed,
-//         selectedItemColor: Colors.white,
-//         unselectedItemColor: Colors.black54,
-//         currentIndex: _currentIndex,
-//         onTap: (index) {
-//           setState(() {
-//             _currentIndex = index;
-//             navigationTapped(index);
-//           });
-//         },
-//         items: [
-//           const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-//           const BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Prefacio'),
-//           const BottomNavigationBarItem(icon: Icon(Icons.music_note), label: 'Hinário'),
-//           const BottomNavigationBarItem(icon: Icon(Icons.event), label: 'Eventos'),
-//           const BottomNavigationBarItem(icon: Icon(Icons.church), label: 'Minha Igreja'),
-//           const BottomNavigationBarItem(icon: Icon(Icons.more_horiz), label: 'Mais'),
-//         ],
-//       ),
-//       body: PageView(
-//         controller: pageController,
-//         onPageChanged: onPageChanged,
-//         children: [
-//           Homescreen(),
-//           Prefacio_Screen(),
-//           Hinario_Screen(),
-//           EventosScreen(),
-//           churchScreen(),
-//           MoreScreen(),
-//         ],
-//       ),
-//     );
-//   }
-// }
-//////////////////////////Modelo 2/////////////////////////////////////////////////////
 import 'package:flutter/material.dart';
 import '../screens/EventosScreen.dart';
 import '../screens/Hinario_Screen.dart';
@@ -98,45 +14,65 @@ class Navegation_Screen extends StatefulWidget {
 }
 
 class _Navegation_ScreenState extends State<Navegation_Screen> {
-  late PageController pageController;
-  int _currentIndex = 0; // ✅ Corrigido: dentro da classe State
+  late PageController _pageController;
+  int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    pageController = PageController();
+    _pageController = PageController();
   }
 
   @override
   void dispose() {
-    pageController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
-  void onPageChanged(int page) {
-    setState(() {
-      _currentIndex = page;
-    });
+  void _onPageChanged(int page) {
+    setState(() => _currentIndex = page);
   }
 
-  void navigationTapped(int page) {
-    pageController.jumpToPage(page);
+  void _navigationTapped(int page) {
+    _pageController.jumpToPage(page);
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    // cores para estados
+    final selectedColor = cs.onPrimary;
+    final unselectedColor = cs.onPrimary.withOpacity(0.60);
+
     return Scaffold(
+      // (opcional) se quiser destacar a barra superiormente com uma borda fina:
+      // bottomNavigationBar: DecoratedBox(
+      //   decoration: BoxDecoration(
+      //     border: Border(top: BorderSide(color: cs.secondary.withOpacity(0.25))),
+      //   ),
+      //   child: _buildBottomBar(cs, selectedColor, unselectedColor),
+      // ),
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.deepOrange,
+        backgroundColor: cs.primary,
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.black54,
         currentIndex: _currentIndex,
+
+        // Ícones e rótulos controlados por ColorScheme
+        selectedItemColor: selectedColor,
+        unselectedItemColor: unselectedColor,
+
+        // (opcional) estilos de rótulo coerentes com o tema
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+
+        // (opcional) tamanhos de ícone
+        selectedIconTheme: const IconThemeData(size: 26),
+        unselectedIconTheme: const IconThemeData(size: 24),
+
         onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-            navigationTapped(index);
-          });
+          setState(() => _currentIndex = index);
+          _navigationTapped(index);
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
@@ -148,9 +84,9 @@ class _Navegation_ScreenState extends State<Navegation_Screen> {
         ],
       ),
       body: PageView(
-        controller: pageController,
-        onPageChanged: onPageChanged,
-        children: [
+        controller: _pageController,
+        onPageChanged: _onPageChanged,
+        children: const [
           Homescreen(),
           Prefacio_Screen(),
           Hinario_Screen(),

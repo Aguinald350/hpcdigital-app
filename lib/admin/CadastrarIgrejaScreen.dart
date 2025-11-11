@@ -1,6 +1,6 @@
-// lib/minha_igreja/cadastrar_igreja_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../admin/widgets/admin_shell.dart';
 
 class CadastrarIgrejaScreen extends StatefulWidget {
   const CadastrarIgrejaScreen({super.key});
@@ -12,22 +12,20 @@ class CadastrarIgrejaScreen extends StatefulWidget {
 class _CadastrarIgrejaScreenState extends State<CadastrarIgrejaScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Campos fixos
   final _nomeIgrejaCtrl = TextEditingController();
   final _secretarioNomeCtrl = TextEditingController();
   final _secretarioContatoCtrl = TextEditingController();
-  final _localizacaoCtrl = TextEditingController();
+  final _localizacaoUrlCtrl = TextEditingController();
+  final _referenciasCtrl = TextEditingController();
 
-  // Pastores dinâmicos
   int _numPastores = 1;
   final List<TextEditingController> _pastorNomeCtrls = [];
   final List<TextEditingController> _pastorContatoCtrls = [];
 
-  // Intendência/Distrito
   String? _intendenciaId;
   String? _intendenciaNome;
-  String? _distritoId;   // vem do doc de intendência
-  String? _distritoNome; // vem do doc de intendência
+  String? _distritoId;
+  String? _distritoNome;
 
   bool _salvando = false;
 
@@ -42,35 +40,44 @@ class _CadastrarIgrejaScreenState extends State<CadastrarIgrejaScreen> {
     _nomeIgrejaCtrl.dispose();
     _secretarioNomeCtrl.dispose();
     _secretarioContatoCtrl.dispose();
-    _localizacaoCtrl.dispose();
+    _localizacaoUrlCtrl.dispose();
+    _referenciasCtrl.dispose();
     for (final c in _pastorNomeCtrls) c.dispose();
     for (final c in _pastorContatoCtrls) c.dispose();
     super.dispose();
   }
 
-  // ---------- UI helpers ----------
   InputDecoration _dec(String label, {String? hint}) => InputDecoration(
     labelText: label,
     hintText: hint,
-    border: const OutlineInputBorder(),
+    filled: true,
+    fillColor: Colors.grey[50],
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
     focusedBorder: const OutlineInputBorder(
       borderSide: BorderSide(color: Colors.deepOrange, width: 2),
     ),
   );
 
-  // Garante a quantidade de controladores conforme _numPastores
   void _syncPastorControllers(int n) {
-    // adiciona
     while (_pastorNomeCtrls.length < n) {
       _pastorNomeCtrls.add(TextEditingController());
       _pastorContatoCtrls.add(TextEditingController());
     }
-    // remove extras
     while (_pastorNomeCtrls.length > n) {
       _pastorNomeCtrls.removeLast().dispose();
       _pastorContatoCtrls.removeLast().dispose();
     }
     setState(() {});
+  }
+
+  String? _validaUrl(String? v) {
+    final t = v?.trim() ?? '';
+    if (t.isEmpty) return 'Informe o link da localização (Google Maps, por ex.)';
+    final uri = Uri.tryParse(t);
+    if (uri == null || !uri.hasScheme || !(uri.isScheme('http') || uri.isScheme('https'))) {
+      return 'Informe uma URL válida (http/https)';
+    }
+    return null;
   }
 
   Future<void> _salvar() async {
@@ -83,7 +90,6 @@ class _CadastrarIgrejaScreenState extends State<CadastrarIgrejaScreen> {
       return;
     }
 
-    // Monta lista de pastores
     final List<Map<String, dynamic>> pastores = [];
     for (int i = 0; i < _numPastores; i++) {
       final nome = _pastorNomeCtrls[i].text.trim();
@@ -99,17 +105,20 @@ class _CadastrarIgrejaScreenState extends State<CadastrarIgrejaScreen> {
 
     setState(() => _salvando = true);
     try {
+      final nomeIgreja = _nomeIgrejaCtrl.text.trim();
       await FirebaseFirestore.instance.collection('igrejas').add({
-        'nome': _nomeIgrejaCtrl.text.trim(),
+        'nome': nomeIgreja,
+        'nomeLower': nomeIgreja.toLowerCase(),
         'numPastores': _numPastores,
-        'pastores': pastores, // [{nome, contato}, ...]
+        'pastores': pastores,
         'secretarioNome': _secretarioNomeCtrl.text.trim(),
         'secretarioContato': _secretarioContatoCtrl.text.trim(),
         'intendenciaId': _intendenciaId,
         'intendenciaNome': _intendenciaNome,
         'distritoId': _distritoId,
         'distritoNome': _distritoNome,
-        'localizacaoUrl': _localizacaoCtrl.text.trim(), // link ou coords
+        'localizacaoUrl': _localizacaoUrlCtrl.text.trim(),
+        'referencias': _referenciasCtrl.text.trim(),
         'criadoEm': FieldValue.serverTimestamp(),
       });
 
@@ -130,219 +139,226 @@ class _CadastrarIgrejaScreenState extends State<CadastrarIgrejaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final intendenciasQuery = FirebaseFirestore.instance
-        .collection('intendencias')
-        .orderBy('nome');
+    // ⚠️ Sem orderBy — compatível com docs antigos; ordenamos por 'nome' no cliente
+    final intendenciasStream =
+    FirebaseFirestore.instance.collection('intendencias').snapshots();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Cadastrar Igreja'),
-        backgroundColor: Colors.deepOrange,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              // Nome da igreja
-              TextFormField(
-                controller: _nomeIgrejaCtrl,
-                decoration: _dec('Nome da Igreja'),
-                validator: (v) {
-                  final t = v?.trim() ?? '';
-                  if (t.isEmpty) return 'Informe o nome da igreja';
-                  if (t.length < 3) return 'O nome deve ter pelo menos 3 caracteres';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Nº de pastores
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Número de Pastores',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  DropdownButton<int>(
-                    value: _numPastores,
-                    items: List.generate(10, (i) => i + 1)
-                        .map((n) => DropdownMenuItem(value: n, child: Text('$n')))
-                        .toList(),
-                    onChanged: (v) {
-                      if (v == null) return;
-                      _numPastores = v;
-                      _syncPastorControllers(v);
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Campos de pastores dinâmicos
-              ...List.generate(_numPastores, (i) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
+    return AdminShell(
+      title: 'Cadastrar Igreja',
+      currentIndex: 4,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 950),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Material(
+              color: Colors.white,
+              elevation: 1,
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
                     children: [
-                      Expanded(
-                        flex: 6,
-                        child: TextFormField(
-                          controller: _pastorNomeCtrls[i],
-                          decoration: _dec('Pastor ${i + 1} - Nome'),
-                          validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Informe o nome' : null,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 5,
-                        child: TextFormField(
-                          controller: _pastorContatoCtrls[i],
-                          decoration: _dec('Contato'),
-                          keyboardType: TextInputType.phone,
-                          validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Informe o contato' : null,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-
-              const SizedBox(height: 8),
-
-              // Secretário
-              TextFormField(
-                controller: _secretarioNomeCtrl,
-                decoration: _dec('Nome do Secretário'),
-                validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Informe o nome do secretário' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _secretarioContatoCtrl,
-                decoration: _dec('Contato do Secretário'),
-                keyboardType: TextInputType.phone,
-                validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Informe o contato do secretário' : null,
-              ),
-
-              const SizedBox(height: 16),
-
-              // Intendência (carrega do Firestore) — define também o Distrito
-              StreamBuilder<QuerySnapshot>(
-                stream: intendenciasQuery.snapshots(),
-                builder: (context, snap) {
-                  if (snap.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-                  if (snap.hasError) {
-                    return const Text('Erro ao carregar intendências');
-                  }
-
-                  final docs = snap.data?.docs ?? [];
-                  if (docs.isEmpty) {
-                    return const Text(
-                      'Nenhuma Intendência cadastrada.\nCadastre uma intendência antes de continuar.',
-                      style: TextStyle(fontSize: 14),
-                    );
-                  }
-
-                  // Se o id selecionado sumiu, reseta
-                  if (_intendenciaId != null &&
-                      !docs.any((d) => d.id == _intendenciaId)) {
-                    _intendenciaId = null;
-                    _intendenciaNome = null;
-                    _distritoId = null;
-                    _distritoNome = null;
-                  }
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      DropdownButtonFormField<String>(
-                        value: _intendenciaId,
-                        isExpanded: true,
-                        decoration: _dec('Intendência'),
-                        items: docs.map((d) {
-                          final nome = (d['nome'] ?? '').toString();
-                          return DropdownMenuItem<String>(
-                            value: d.id,
-                            child: Text(nome.isEmpty ? '(Sem nome)' : nome),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            _intendenciaId = val;
-                            final doc = docs.firstWhere((d) => d.id == val);
-                            _intendenciaNome = (doc['nome'] ?? '').toString();
-                            // pega distrito junto (salvo quando cadastrou a intendência)
-                            _distritoId = (doc['distritoId'] ?? '').toString().isEmpty
-                                ? null
-                                : (doc['distritoId'] as String);
-                            _distritoNome = (doc['distritoNome'] ?? '').toString().isEmpty
-                                ? null
-                                : (doc['distritoNome'] as String);
-                          });
+                      TextFormField(
+                        controller: _nomeIgrejaCtrl,
+                        decoration: _dec('Nome da Igreja'),
+                        validator: (v) {
+                          final t = v?.trim() ?? '';
+                          if (t.isEmpty) return 'Informe o nome da igreja';
+                          if (t.length < 3) return 'O nome deve ter pelo menos 3 caracteres';
+                          return null;
                         },
-                        validator: (v) => v == null ? 'Selecione uma intendência' : null,
                       ),
-                      if (_distritoNome != null && _distritoNome!.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Distrito detectado: $_distritoNome',
-                          style: const TextStyle(color: Colors.black54),
+                      const SizedBox(height: 16),
+
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text('Número de Pastores', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ),
+                          DropdownButton<int>(
+                            value: _numPastores,
+                            items: List.generate(10, (i) => i + 1)
+                                .map((n) => DropdownMenuItem(value: n, child: Text('$n')))
+                                .toList(),
+                            onChanged: (v) {
+                              if (v == null) return;
+                              _numPastores = v;
+                              _syncPastorControllers(v);
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      ...List.generate(_numPastores, (i) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 6,
+                                child: TextFormField(
+                                  controller: _pastorNomeCtrls[i],
+                                  decoration: _dec('Pastor ${i + 1} - Nome'),
+                                  validator: (v) =>
+                                  (v == null || v.trim().isEmpty) ? 'Informe o nome' : null,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 5,
+                                child: TextFormField(
+                                  controller: _pastorContatoCtrls[i],
+                                  decoration: _dec('Contato'),
+                                  keyboardType: TextInputType.phone,
+                                  validator: (v) =>
+                                  (v == null || v.trim().isEmpty) ? 'Informe o contato' : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+
+                      const SizedBox(height: 8),
+
+                      TextFormField(
+                        controller: _secretarioNomeCtrl,
+                        decoration: _dec('Nome do Secretário'),
+                        validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Informe o nome do secretário' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _secretarioContatoCtrl,
+                        decoration: _dec('Contato do Secretário'),
+                        keyboardType: TextInputType.phone,
+                        validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Informe o contato do secretário' : null,
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      StreamBuilder<QuerySnapshot>(
+                        stream: intendenciasStream,
+                        builder: (context, snap) {
+                          if (snap.connectionState == ConnectionState.waiting) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+                          }
+                          if (snap.hasError) return const Text('Erro ao carregar intendências');
+
+                          var docs = snap.data?.docs ?? [];
+                          if (docs.isEmpty) {
+                            return const Text(
+                              'Nenhuma Intendência cadastralda.\nCadastre uma intendência antes de continuar.',
+                              style: TextStyle(fontSize: 14),
+                            );
+                          }
+
+                          // Ordena por 'nome' no cliente
+                          docs.sort((a, b) {
+                            final an = ((a['nome'] ?? '') as String).toLowerCase();
+                            final bn = ((b['nome'] ?? '') as String).toLowerCase();
+                            return an.compareTo(bn);
+                          });
+
+                          if (_intendenciaId != null && !docs.any((d) => d.id == _intendenciaId)) {
+                            _intendenciaId = null;
+                            _intendenciaNome = null;
+                            _distritoId = null;
+                            _distritoNome = null;
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              DropdownButtonFormField<String>(
+                                value: _intendenciaId,
+                                isExpanded: true,
+                                decoration: _dec('Intendência'),
+                                items: docs.map((d) {
+                                  final nome = (d['nome'] ?? '').toString();
+                                  return DropdownMenuItem<String>(
+                                    value: d.id,
+                                    child: Text(nome.isEmpty ? '(Sem nome)' : nome),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  setState(() {
+                                    _intendenciaId = val;
+                                    final doc = docs.firstWhere((d) => d.id == val);
+                                    _intendenciaNome = (doc['nome'] ?? '').toString();
+
+                                    _distritoId = (doc['distritoId'] ?? '').toString().isEmpty
+                                        ? null
+                                        : (doc['distritoId'] as String);
+                                    _distritoNome = (doc['distritoNome'] ?? '').toString().isEmpty
+                                        ? null
+                                        : (doc['distritoNome'] as String);
+                                  });
+                                },
+                                validator: (v) => v == null ? 'Selecione uma intendência' : null,
+                              ),
+                              if (_distritoNome != null && _distritoNome!.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Text('Distrito detectado: $_distritoNome',
+                                    style: const TextStyle(color: Colors.black54)),
+                              ],
+                            ],
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      TextFormField(
+                        controller: _localizacaoUrlCtrl,
+                        decoration: _dec(
+                          'Link da Localização (Maps)',
+                          hint: 'Cole o link do Google Maps (ex.: https://maps.app.goo.gl/....)',
                         ),
-                      ],
+                        keyboardType: TextInputType.url,
+                        validator: _validaUrl,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _referenciasCtrl,
+                        decoration: _dec(
+                          'Referências / pontos ao redor',
+                          hint: 'Ex.: Próximo à Escola XYZ; na rua do mercado ABC; caminho por…',
+                        ),
+                        maxLines: 3,
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      _salvando
+                          ? const Center(child: CircularProgressIndicator())
+                          : SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.save),
+                          label: const Text('Salvar'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepOrange,
+                            minimumSize: const Size(double.infinity, 50),
+                          ),
+                          onPressed: _salvar,
+                        ),
+                      ),
                     ],
-                  );
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              // Localização (link Google Maps ou coordenadas)
-              TextFormField(
-                controller: _localizacaoCtrl,
-                decoration: _dec(
-                  'Localização (link ou coordenadas)',
-                  hint:
-                  'Cole um link do Google Maps ou use "lat,long" (ex: -8.8381,13.2345)',
-                ),
-                keyboardType: TextInputType.url,
-                validator: (v) {
-                  final t = v?.trim() ?? '';
-                  if (t.isEmpty) return 'Informe a localização (link ou coordenadas)';
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 24),
-
-              _salvando
-                  ? const Center(child: CircularProgressIndicator())
-                  : SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.save),
-                  label: const Text('Salvar'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepOrange,
-                    minimumSize: const Size(double.infinity, 50),
                   ),
-                  onPressed: _salvar,
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),

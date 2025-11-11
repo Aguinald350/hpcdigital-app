@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'SecaoScreen.dart';
 
+// telas fixas dentro de lib/screens/secoes/
+import 'secoes/credo_apostolico_screen.dart';
+import 'secoes/oracao_dominical_screen.dart';
+import 'secoes/ritual_santa_ceia_screen.dart';
+import 'secoes/invocacoes_chamadas_screen.dart';
+import 'secoes/leitura_responsiva_screen.dart';
+
 class Hinario_Screen extends StatefulWidget {
   const Hinario_Screen({super.key});
 
@@ -10,10 +17,37 @@ class Hinario_Screen extends StatefulWidget {
 
 class _Hinario_ScreenState extends State<Hinario_Screen> {
   void _abrirSecao(BuildContext context, String titulo) {
+    Widget? destino;
+
+    if (titulo == 'Credo Apostólico') {
+      destino = const CredoApostolicoScreen();
+    } else if (titulo == 'Oração Dominical') {
+      destino = const OracaoDominicalScreen();
+    } else if (titulo == 'Ritual da Santa Ceia') {
+      destino = const RitualSantaCeiaScreen();
+    } else if (titulo == 'Invocações e Chamadas de Adoração') {
+      destino = const InvocacoesChamadasScreen();
+    } else if (titulo == 'Leitura Responsiva') {
+      destino = const LeituraResponsivaScreen();
+    }
+
+    if (destino != null) {
+      Navigator.push(
+        context,
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 350),
+          pageBuilder: (_, animation, __) =>
+              FadeTransition(opacity: animation, child: destino!),
+        ),
+      );
+      return;
+    }
+
+    // Demais seções dinâmicas
     Navigator.push(
       context,
       PageRouteBuilder(
-        transitionDuration: Duration(milliseconds: 500),
+        transitionDuration: const Duration(milliseconds: 350),
         pageBuilder: (_, animation, __) => FadeTransition(
           opacity: animation,
           child: SecaoScreen(titulo: titulo),
@@ -22,9 +56,10 @@ class _Hinario_ScreenState extends State<Hinario_Screen> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     final secoes = [
       'Português',
       'Kikongo',
@@ -38,11 +73,12 @@ class _Hinario_ScreenState extends State<Hinario_Screen> {
     ];
 
     return Scaffold(
-      backgroundColor: Color(0xFFF9F9F9),
+      backgroundColor: cs.background,
       appBar: AppBar(
-        backgroundColor: Colors.deepOrange,
+        backgroundColor: cs.primary,      // era: Colors.deepOrange
+        foregroundColor: cs.onPrimary,     // texto/ícones do AppBar
         elevation: 0,
-        title: const Text("Hinário", style: TextStyle(color: Colors.white)),
+        title: const Text("Hinário"),
         centerTitle: true,
       ),
       body: ListView.builder(
@@ -50,30 +86,30 @@ class _Hinario_ScreenState extends State<Hinario_Screen> {
         itemCount: secoes.length,
         itemBuilder: (context, index) {
           final titulo = secoes[index];
-
-          return GestureDetector(
-            onTap: () => _abrirSecao(context, titulo),
-            child: Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
+          return Card(
+            color: cs.secondaryContainer, // cards/acessórios
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: BorderSide(color: cs.secondary), // borda/realce
+            ),
+            elevation: 0,
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            child: ListTile(
+              onTap: () => _abrirSecao(context, titulo),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              leading: CircleAvatar(
+                backgroundColor: cs.secondaryContainer,
+                child: Icon(Icons.music_note, color: cs.onSecondaryContainer),
               ),
-              elevation: 5,
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.deepOrange,
-                  child: Icon(Icons.music_note, color: Colors.white),
+              title: Text(
+                titulo,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSecondaryContainer,
                 ),
-                title: Text(
-                  titulo,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-                trailing: Icon(Icons.arrow_forward_ios, color: Colors.deepOrange),
               ),
+              trailing: Icon(Icons.arrow_forward_ios, color: cs.primary),
             ),
           );
         },

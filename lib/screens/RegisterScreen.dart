@@ -1,7 +1,11 @@
+// lib/screens/RegisterScreen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'LoginScreen.dart';
+import '../services/email_verification.dart'; // << ADICIONE
+import 'verify_email_screen.dart';            // << ADICIONE
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -12,87 +16,142 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _customOrganismoController = TextEditingController();
+  final _customIgrejaController = TextEditingController();
 
+  bool _loading = false;
+  bool _loadingIgrejas = true;
+
+  // 🔹 Listas dinâmicas
+  List<String> _igrejas = [];
   String? _selectedIgreja;
-  final List<String> _igrejas = [
-    'Igreja Central de Luanda',
-    'Igreja do Cazenga',
-    'Igreja de Calemba',
-    'Igreja da Luz'
-  ];
 
-  String? _selectedOrganismo;
-  final List<String> _organismos = [
+  final List<String> _organismos = const [
     'Criança',
     'Jovem',
     'Jovem Adulto',
     'Organização dos Papas',
     'Organização das Mamas',
+    'Outro',
   ];
+  String? _selectedOrganismo;
 
-  bool _loading = false;
+  @override
+  void initState() {
+    super.initState();
+    _carregarIgrejas();
+  }
 
-  void _register() async {
-    if (_formKey.currentState!.validate()) {
-      final email = _emailController.text.trim();
-      final password = _passwordController.text.trim();
-      final name = _nameController.text.trim();
+  /// 🔹 Carrega lista de igrejas do Firestore
+  Future<void> _carregarIgrejas() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('igrejas').get();
 
-      setState(() => _loading = true);
+      final nomes = snapshot.docs
+          .map((doc) => (doc['nome'] ?? '').toString())
+          .where((nome) => nome.isNotEmpty)
+          .toList()
+        ..sort((a, b) => a.compareTo(b));
 
-      try {
-        // Cria o usuário no Firebase Auth
-        final credential = await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(email: email, password: password);
+      if (!nomes.contains('Outro')) nomes.add('Outro');
 
-        final uid = credential.user!.uid;
+      setState(() {
+        _igrejas = nomes;
+        _loadingIgrejas = false;
+      });
+    } catch (e) {
+      setState(() {
+        _igrejas = const ['Outro'];
+        _loadingIgrejas = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao carregar igrejas: $e')),
+      );
+    }
+  }
 
-        // Verifica se o email é de um admin
-        final isAdmin = email == 'admin@hpc.com' || email == 'aguinaldo@igreja.org';
+  /// 🔹 Registro + Firestore + envio de verificação + tela "verifique seu e-mail"
+  Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
 
-        // Salva dados no Firestore
-        await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
-          'uid': uid,
-          'nome': name,
-          'email': email,
-          'igreja': _selectedIgreja,
-          'organismo': _selectedOrganismo,
-          'role': isAdmin ? 'admin' : 'user',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final name = _nameController.text.trim();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cadastro realizado com sucesso!')),
-        );
+    setState(() => _loading = true);
 
-        await Future.delayed(const Duration(seconds: 2));
+    try {
+      // 1) Cria usuário e envia e-mail de verificação
+      final cred = await registrarEnviarVerificacao(email: email, senha: password);
+      final user = cred.user!;
+      final uid = user.uid;
 
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const Loginscreen()),
-        );
-      } on FirebaseAuthException catch (e) {
-        String msg = e.message ?? 'Erro ao cadastrar';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg)),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro inesperado: $e')),
-        );
-      }
+      // 2) Regras para admin (como você já tinha)
+      final isAdmin = email == 'admin@hpc.com' || email == 'aguinaldo@igreja.org';
 
-      setState(() => _loading = false);
+      // 3) Campos dependentes do formulário
+      final organismoFinal = _selectedOrganismo == 'Outro'
+          ? _customOrganismoController.text.trim()
+          : _selectedOrganismo;
+
+      final igrejaFinal = _selectedIgreja == 'Outro'
+          ? _customIgrejaController.text.trim()
+          : _selectedIgreja;
+
+      // 4) Trial de 15 dias
+      final trialEndsAt = Timestamp.fromDate(DateTime.now().add(const Duration(days: 15)));
+
+      // 5) Atualiza displayName (opcional, mas útil)
+      await user.updateDisplayName(name);
+
+      // 6) Grava documento do usuário
+      await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
+        'uid': uid,
+        'nome': name,
+        'email': email,
+        'telefone': '',
+        'igreja': igrejaFinal,
+        'organismo': organismoFinal,
+        'role': isAdmin ? 'admin' : 'user',
+        'createdAt': FieldValue.serverTimestamp(),
+        'trialEndsAt': trialEndsAt,
+        'activeFrom': null,
+        'activeUntil': null,
+        'requisitouAtivacao': false,
+      });
+
+      // 7) Feedback e ir para tela de verificação
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cadastro realizado! Verifique seu e-mail.')),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const VerifiqueEmailScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Erro ao cadastrar usuário')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro inesperado: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -107,66 +166,114 @@ class _RegisterScreenState extends State<RegisterScreen> {
           key: _formKey,
           child: Column(
             children: [
+              // Nome
               TextFormField(
                 controller: _nameController,
                 decoration: _buildInputDecoration('Nome completo'),
-                validator: (value) =>
-                value!.isEmpty ? 'Informe seu nome completo' : null,
+                validator: (value) => value == null || value.isEmpty ? 'Informe seu nome completo' : null,
               ),
               const SizedBox(height: 16),
+
+              // Email
               TextFormField(
                 controller: _emailController,
                 decoration: _buildInputDecoration('Email'),
-                validator: (value) =>
-                value!.isEmpty ? 'Informe seu email' : null,
+                validator: (value) => value == null || value.isEmpty ? 'Informe seu email' : null,
               ),
               const SizedBox(height: 16),
+
+              // Senha
               TextFormField(
                 controller: _passwordController,
                 decoration: _buildInputDecoration('Senha'),
                 obscureText: true,
-                validator: (value) => value!.length < 6
+                validator: (value) => (value == null || value.length < 6)
                     ? 'A senha deve ter pelo menos 6 caracteres'
                     : null,
               ),
               const SizedBox(height: 16),
+
+              // Confirmar senha
               TextFormField(
                 controller: _confirmPasswordController,
                 decoration: _buildInputDecoration('Confirmar senha'),
                 obscureText: true,
-                validator: (value) => value != _passwordController.text
-                    ? 'As senhas não coincidem'
-                    : null,
+                validator: (value) =>
+                value != _passwordController.text ? 'As senhas não coincidem' : null,
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
+
+              // 🔹 Igreja
+              _loadingIgrejas
+                  ? const Padding(
+                padding: EdgeInsets.all(12),
+                child: CircularProgressIndicator(color: Colors.deepOrange),
+              )
+                  : DropdownButtonFormField<String>(
                 value: _selectedIgreja,
                 items: _igrejas
-                    .map((igreja) =>
-                    DropdownMenuItem(value: igreja, child: Text(igreja)))
+                    .map((igreja) => DropdownMenuItem(value: igreja, child: Text(igreja)))
                     .toList(),
                 onChanged: (value) => setState(() => _selectedIgreja = value),
-                decoration: _buildInputDecoration('Distrito'),
-                validator: (value) =>
-                value == null ? 'Selecione uma igreja/distrito' : null,
+                decoration: _buildInputDecoration('Distrito / Igreja'),
+                validator: (value) {
+                  if (value == null) return 'Selecione uma igreja';
+                  if (value == 'Outro' && (_customIgrejaController.text.trim().isEmpty)) {
+                    return 'Informe o nome do distrito/igreja';
+                  }
+                  return null;
+                },
               ),
+
+              if (_selectedIgreja == 'Outro') ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _customIgrejaController,
+                  decoration: _buildInputDecoration('Digite o nome do distrito/igreja'),
+                  validator: (value) {
+                    if (_selectedIgreja == 'Outro' && (value == null || value.trim().isEmpty)) {
+                      return 'Informe o nome do distrito/igreja';
+                    }
+                    return null;
+                  },
+                ),
+              ],
               const SizedBox(height: 16),
+
+              // 🔹 Organismo
               DropdownButtonFormField<String>(
                 value: _selectedOrganismo,
                 items: _organismos
-                    .map((org) =>
-                    DropdownMenuItem(value: org, child: Text(org)))
+                    .map((org) => DropdownMenuItem(value: org, child: Text(org)))
                     .toList(),
-                onChanged: (value) =>
-                    setState(() => _selectedOrganismo = value),
-                decoration: _buildInputDecoration('Ministério ou Organismos'),
-                validator: (value) => value == null
-                    ? 'Selecione uma associação ou organismo'
-                    : null,
+                onChanged: (value) => setState(() => _selectedOrganismo = value),
+                decoration: _buildInputDecoration('Ministério / Organismo'),
+                validator: (value) {
+                  if (value == null) return 'Selecione um ministério';
+                  if (value == 'Outro' && (_customOrganismoController.text.trim().isEmpty)) {
+                    return 'Informe o nome do organismo';
+                  }
+                  return null;
+                },
               ),
+
+              if (_selectedOrganismo == 'Outro') ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _customOrganismoController,
+                  decoration: _buildInputDecoration('Digite o nome do organismo'),
+                  validator: (value) {
+                    if (_selectedOrganismo == 'Outro' && (value == null || value.trim().isEmpty)) {
+                      return 'Informe o nome do organismo';
+                    }
+                    return null;
+                  },
+                ),
+              ],
               const SizedBox(height: 24),
+
               _loading
-                  ? const CircularProgressIndicator()
+                  ? const CircularProgressIndicator(color: Colors.deepOrange)
                   : ElevatedButton(
                 onPressed: _register,
                 style: ElevatedButton.styleFrom(
@@ -179,6 +286,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+
               TextButton(
                 onPressed: () {
                   Navigator.pushReplacement(
@@ -199,15 +307,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   InputDecoration _buildInputDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.grey),
-      enabledBorder: const OutlineInputBorder(
+    return const InputDecoration(
+      labelText: '',
+      labelStyle: TextStyle(color: Colors.grey),
+      enabledBorder: OutlineInputBorder(
         borderSide: BorderSide(color: Colors.deepOrange),
       ),
-      focusedBorder: const OutlineInputBorder(
-        borderSide: BorderSide(color: Colors.deepOrange, width: 3),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.deepOrange, width: 2.5),
       ),
-    );
+    ).copyWith(labelText: label);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _customOrganismoController.dispose();
+    _customIgrejaController.dispose();
+    super.dispose();
   }
 }

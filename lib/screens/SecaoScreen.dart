@@ -26,9 +26,12 @@ class SecaoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.deepOrange,
+        backgroundColor: cs.primary,      // was: Colors.deepOrange
+        foregroundColor: cs.onPrimary,     // texto/ícones do AppBar
         title: Text(titulo),
         centerTitle: true,
       ),

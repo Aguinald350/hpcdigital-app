@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>HPCMobile — Pré-lançamento</title>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+
+    <meta name="description" content="HPCMobile — Hinos, orações e comunhão. Baixe a versão oficial pré-lançamento." />
+</head>
+<body class="dark">
+
+<main class="container">
+    <header class="top">
+        <div class="brand">
+            <img src="images/icon.png" alt="HPCMobile logo" class="brand__logo">
+            <div class="brand__text">
+                <div class="brand__name">HPCMobile</div>
+                <div class="brand__tag">HOSANA — Fé, Adoração e Comunhão no teu bolso</div>
+            </div>
+        </div>
+
+        <nav class="top__actions">
+            <button id="btn-support" class="btn btn-ghost" title="Falar com o suporte via WhatsApp">Suporte</button>
+            <a id="download-link-header" class="btn btn-ghost" href="/HPCMobile_v1.0.apk" download>Baixar APK</a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="hero__left">
+            <h1 class="title">Leva os hinos, orações e reflexões para onde fores</h1>
+            <p class="lead">
+                A versão oficial pré-lançamento do HPCMobile está disponível para instalação manual.
+                Instalações dirigidas para membros e líderes. Simplicidade, segurança e suporte.
+            </p>
+
+            <ul class="features">
+                <li>🎵 Letras de hinos multi-idioma</li>
+                <li>📖 Leituras e devocionais diários</li>
+                <li>🔔 Agenda de eventos e notificações</li>
+                <li>🤝 Canal oficial e suporte via WhatsApp</li>
+            </ul>
+
+            <div class="cta-row">
+                <a id="download-btn" href="/HPCMobile_v1.0.apk" class="btn btn-primary" download>
+                    ⬇️ Baixar HPCMobile (APK)
+                </a>
+
+                <button id="copy-link" class="btn btn-outline">
+                    🔗 Copiar link
+                </button>
+            </div>
+
+            <div class="instructions card">
+                <strong>Como instalar (Android):</strong>
+                <ol>
+                    <li>Baixe o APK clicando no botão acima.</li>
+                    <li>Abra o ficheiro e permita "Instalar aplicações desconhecidas" quando solicitado.</li>
+                    <li>Concluída a instalação, abra o app e siga as instruções.</li>
+                </ol>
+                <p class="note">
+                    Nota: Esta distribuição é <strong>pré-lançamento</strong> — a versão final ficará disponível na Play Store futuramente.
+                </p>
+            </div>
+        </div>
+
+        <aside class="hero__right card qr-panel">
+            <div class="qr-wrap">
+                <img src="images/qrcodeimage.png" alt="QR para baixar HPCMobile" class="qr-image">
+                <p class="qr-caption">Escaneie para baixar</p>
+            </div>
+
+            <div class="mirror">
+                <div class="slogan">HPCMobile — Igreja em comunhão, sempre.</div>
+                <a id="btn-copy-link-2" class="btn btn-sm btn-outline">🔗 Copiar link</a>
+                <a id="download-btn-2" href="/HPCMobile_v1.0.apk" class="btn btn-sm btn-primary" download>⬇️ Baixar APK</a>
+            </div>
+        </aside>
+    </section>
+
+    <footer class="footer">
+        <div>Suporte: <a href="https://wa.me/244925780193?text=Olá%20HPC%20Support%2C%20preciso%20de%20ajuda%20com%20a%20instalação" id="whatsapp-link">+244 925 780 193</a></div>
+        <div class="legal">Distribuição pré-lançamento — uso pessoal e comunitário. © HPC Digital</div>
+    </footer>
+</main>
+
+<!-- Toast -->
+<div id="toast" class="toast" aria-hidden="true"></div>
+
+<!-- JS -->
+<script src="app.js"></script>
+</body>
+</html>
