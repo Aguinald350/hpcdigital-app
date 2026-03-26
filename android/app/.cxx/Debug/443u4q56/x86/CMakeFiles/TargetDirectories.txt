@@ -1,2 +1,0 @@
-C:/Users/DELL/hpcdigital/android/app/.cxx/Debug/443u4q56/x86/CMakeFiles/edit_cache.dir
-C:/Users/DELL/hpcdigital/android/app/.cxx/Debug/443u4q56/x86/CMakeFiles/rebuild_cache.dir
