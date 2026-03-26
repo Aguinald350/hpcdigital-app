@@ -1,15 +1,36 @@
-# Miscellaneous
+# =========================
+# GENERAL
+# =========================
 *.class
 *.lock
 *.log
 *.pyc
 *.swp
+*.tmp
+*.bak
+*.iml
+
 .buildlog/
-.history
+.history/
 
+# =========================
+# FLUTTER / DART
+# =========================
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.packages.generated
+.pub/
+.pub-preload-cache/
+build/
+coverage/
+flutter_*.png
+linked_*.ds
+unlinked.ds
+unlinked_spec.ds
 
-
-# Flutter repo-specific
+# Flutter generated / repo-specific
 /bin/cache/
 /bin/internal/bootstrap.bat
 /bin/internal/bootstrap.sh
@@ -27,28 +48,14 @@
 /packages/flutter/coverage/
 version
 analysis_benchmark.json
-
-# packages file containing multi-root paths
-.packages.generated
-
-# Flutter/Dart/Pub related
 **/doc/api/
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
 **/generated_plugin_registrant.dart
-.packages
-.pub-preload-cache/
-.pub/
-build/
-flutter_*.png
-linked_*.ds
-unlinked.ds
-unlinked_spec.ds
 
-# Android related
-**/android/**/gradle-wrapper.jar
+# =========================
+# ANDROID
+# =========================
 .gradle/
+**/android/**/gradle-wrapper.jar
 **/android/captures/
 **/android/gradlew
 **/android/gradlew.bat
@@ -56,8 +63,19 @@ unlinked_spec.ds
 **/android/**/GeneratedPluginRegistrant.java
 **/android/key.properties
 *.jks
+*.keystore
+android/app/*.keystore
+android/app/hpcdigital.keystore
+android/key.properties
+android/app/.cxx/
+android/app/build/
 
-# iOS/XCode related
+# Sensitive Android config
+android/app/google-services.json
+
+# =========================
+# IOS / MACOS
+# =========================
 **/ios/**/*.mode1v3
 **/ios/**/*.mode2v3
 **/ios/**/*.moved-aside
@@ -94,35 +112,53 @@ unlinked_spec.ds
 **/macos/Flutter/ephemeral
 **/xcuserdata/
 
-# Windows
+# =========================
+# WINDOWS / LINUX
+# =========================
 **/windows/flutter/generated_plugin_registrant.cc
 **/windows/flutter/generated_plugin_registrant.h
 **/windows/flutter/generated_plugins.cmake
-
-# Linux
 **/linux/flutter/generated_plugin_registrant.cc
 **/linux/flutter/generated_plugin_registrant.h
 **/linux/flutter/generated_plugins.cmake
 
-# Coverage
-coverage/
+# =========================
+# FIREBASE / CLOUD / SECRETS
+# =========================
+.firebase/
+.firebaserc.local
+firebase-debug.log
+firebase-debug.*.log
+.firestore/
+functions/serviceAccount.json
+functions/.runtimeconfig.json
 
-# Symbols
-app.*.symbols
+# =========================
+# ENV / PRIVATE
+# =========================
+.env
+.env.*
+.venv/
+.idea/
+.vscode/
 
-# Exceptions to above rules.
+# =========================
+# PROJECT-SPECIFIC TRASH
+# =========================
+repo.git/
+.dist/
+release_site/*.apk
+build_android_log.txt
+build_verbose_log.txt
+flutter_01.log
+flutter_02.log
+
+# =========================
+# EXCEPTIONS
+# =========================
 !**/ios/**/default.mode1v3
 !**/ios/**/default.mode2v3
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
-# keystore/key props
-android/app/hpcdigital.keystore
-android/key.properties
-# local keystore & key props
-android/app/*.keystore
-.firebase/
-.env
-.idea/
-release_site/*.apk
