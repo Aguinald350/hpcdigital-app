@@ -62,6 +62,7 @@ android {
     namespace = "com.hpcdigital.app"
     compileSdk = 36
 
+    val mapsApiKey = project.findProperty("MAPS_API_KEY") as String? ?: ""
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -76,6 +77,8 @@ android {
         targetSdk = 36
         versionCode = project.properties["flutter.versionCode"]?.toString()?.toInt() ?: 4
         versionName = project.properties["flutter.versionName"]?.toString() ?: "1.0.0"
+
+        resValue("string", "MAPS_API_KEY", mapsApiKey)
     }
 
     signingConfigs {
