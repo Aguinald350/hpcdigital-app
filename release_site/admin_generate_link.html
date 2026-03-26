@@ -1,0 +1,175 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Gerar link de verificação — Admin</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        body{font-family:Arial,Helvetica,sans-serif;max-width:720px;margin:30px auto;padding:10px}
+        input,button{padding:8px;margin:6px 0;width:100%}
+        .small{width:auto;display:inline-block}
+        .hidden{display:none}
+        #msg{color:#a00}
+        pre#out{white-space:pre-wrap}
+    </style>
+</head>
+<body>
+<h2>Painel: Gerar link de verificação</h2>
+
+<div id="authBox">
+    <p><b>Login Admin</b></p>
+    <input id="emailLogin" placeholder="admin@exemplo.com" />
+    <input id="passwordLogin" type="password" placeholder="senha" />
+    <button id="btnLogin">Login</button>
+    <div id="loginMsg"></div>
+</div>
+
+<div id="mainBox" class="hidden">
+    <p><b>Gerar link para:</b></p>
+    <input id="targetEmail" placeholder="user@exemplo.com" />
+    <button id="btnGen">Gerar link</button>
+    <pre id="out" style="background:#f6f6f6;padding:10px;border:1px solid #ddd;"></pre>
+    <button id="btnCopy" style="display:none">Copiar</button>
+    <button id="btnWhatsapp" style="display:none">Enviar WhatsApp</button>
+    <p style="color:#666;margin-top:12px">Nota: estamos a validar `role: "admin"` no documento Firestore <code>usuarios/{uid}</code>.</p>
+</div>
+
+<div id="infoBox" style="margin-top:12px">
+    <div id="status">A iniciar...</div>
+    <div id="msg"></div>
+</div>
+
+<!-- Firebase compat JS (Auth + Firestore) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+    // CONFIG - usa a tua firebaseConfig
+    const firebaseConfig = {
+      apiKey: "AIzaSyBY5XiDRceLqCdMlt2M4FbkTphtEKXUtGI",
+      authDomain: "hpcmobile-9ec3e.firebaseapp.com",
+      projectId: "hpcmobile-9ec3e",
+      storageBucket: "hpcmobile-9ec3e.appspot.com",
+      messagingSenderId: "7719808461",
+      appId: "1:7719808461:web:feb8c3b050874fe71f2884"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const authBox = document.getElementById('authBox');
+    const mainBox = document.getElementById('mainBox');
+    const loginMsg = document.getElementById('loginMsg');
+    const status = document.getElementById('status');
+    const msg = document.getElementById('msg');
+    const btnLogin = document.getElementById('btnLogin');
+    const btnGen = document.getElementById('btnGen');
+    const out = document.getElementById('out');
+    const btnCopy = document.getElementById('btnCopy');
+    const btnWhatsapp = document.getElementById('btnWhatsapp');
+
+
+    const FUNCTION_URL = "https://generateverificationlink-jvey32m65a-bq.a.run.app";
+
+    // Observa estado e valida role no Firestore
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        status.innerText = 'Não autenticado. Faz login com uma conta admin.';
+        authBox.style.display = '';
+        mainBox.classList.add('hidden');
+        msg.innerText = '';
+        return;
+      }
+      status.innerText = 'Usuário autenticado. A verificar role no Firestore...';
+      try {
+        // busca doc usuario no Firestore
+        const doc = await db.collection('usuarios').doc(user.uid).get();
+        if (!doc.exists) {
+          msg.innerText = 'Documento de usuário não encontrado em /usuarios. Serás desconectado.';
+          await auth.signOut();
+          return;
+        }
+        const data = doc.data() || {};
+        const role = (data.role || '').toString().toLowerCase();
+        if (role !== 'admin') {
+          msg.innerText = 'Conta não tem role=admin no Firestore. Serás desconectado.';
+          await auth.signOut();
+          return;
+        }
+        // ok, és admin
+        status.innerText = 'Autenticado como admin (Firestorm role).';
+        authBox.style.display = 'none';
+        mainBox.classList.remove('hidden');
+        msg.innerText = '';
+      } catch (err) {
+        msg.innerText = 'Erro ao verificar role: ' + (err.message || err);
+        console.error(err);
+        await auth.signOut();
+      }
+    });
+
+    // Login botão
+    btnLogin.addEventListener('click', async () => {
+      loginMsg.innerText = 'A autenticar...';
+      const e = document.getElementById('emailLogin').value.trim();
+      const p = document.getElementById('passwordLogin').value;
+      try {
+        await auth.signInWithEmailAndPassword(e, p);
+        loginMsg.innerText = 'Login efetuado. A verificar role...';
+      } catch (err) {
+        loginMsg.innerText = 'Erro login: ' + (err.message || err);
+      }
+    });
+
+    // Gerar link
+    btnGen.addEventListener('click', async () => {
+      out.innerText = '';
+      btnCopy.style.display = 'none'; btnWhatsapp.style.display = 'none';
+      const target = document.getElementById('targetEmail').value.trim();
+      if (!target) return alert('Coloca o email do usuário.');
+      const user = auth.currentUser;
+      if (!user) return alert('Necessário estar autenticado como admin.');
+      try {
+        // re-validate role server-side BEFORE calling function (optional but good):
+        const doc = await db.collection('usuarios').doc(user.uid).get();
+        const role = (doc.exists && doc.data().role) ? doc.data().role : null;
+        if (String(role).toLowerCase() !== 'admin') {
+          return alert('Conta do admin no Firestore não tem role=admin — operação cancelada.');
+        }
+
+        // id token para autenticar a chamada HTTP
+        const idToken = await user.getIdToken();
+        const res = await fetch(FUNCTION_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + idToken
+          },
+          body: JSON.stringify({ email: target })
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          out.innerText = 'Erro: ' + (json.error || JSON.stringify(json));
+          return;
+        }
+        const link = json.link || json.data?.link || null;
+        if (!link) {
+          out.innerText = 'Resposta sem link: ' + JSON.stringify(json);
+          return;
+        }
+        out.innerText = link;
+        btnCopy.style.display = '';
+        btnWhatsapp.style.display = '';
+        btnCopy.onclick = () => navigator.clipboard.writeText(link).then(()=>alert('Copiado'));
+        btnWhatsapp.onclick = () => {
+          const text = encodeURIComponent('Segue o link para verificar o email:\n\n' + link);
+          window.open('https://wa.me/?text=' + text, '_blank');
+        };
+      } catch (err) {
+        out.innerText = 'Erro: ' + (err.message || err);
+      }
+    });
+</script>
+</body>
+</html>

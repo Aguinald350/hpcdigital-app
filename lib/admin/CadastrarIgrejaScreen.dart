@@ -72,7 +72,8 @@ class _CadastrarIgrejaScreenState extends State<CadastrarIgrejaScreen> {
 
   String? _validaUrl(String? v) {
     final t = v?.trim() ?? '';
-    if (t.isEmpty) return 'Informe o link da localização (Google Maps, por ex.)';
+    // Campo agora opcional: se vazio, não há erro.
+    if (t.isEmpty) return null;
     final uri = Uri.tryParse(t);
     if (uri == null || !uri.hasScheme || !(uri.isScheme('http') || uri.isScheme('https'))) {
       return 'Informe uma URL válida (http/https)';
@@ -106,6 +107,9 @@ class _CadastrarIgrejaScreenState extends State<CadastrarIgrejaScreen> {
     setState(() => _salvando = true);
     try {
       final nomeIgreja = _nomeIgrejaCtrl.text.trim();
+      final localizacaoText = _localizacaoUrlCtrl.text.trim();
+      final localizacaoValue = localizacaoText.isEmpty ? null : localizacaoText;
+
       await FirebaseFirestore.instance.collection('igrejas').add({
         'nome': nomeIgreja,
         'nomeLower': nomeIgreja.toLowerCase(),
@@ -117,7 +121,8 @@ class _CadastrarIgrejaScreenState extends State<CadastrarIgrejaScreen> {
         'intendenciaNome': _intendenciaNome,
         'distritoId': _distritoId,
         'distritoNome': _distritoNome,
-        'localizacaoUrl': _localizacaoUrlCtrl.text.trim(),
+        // grava null quando não informado
+        'localizacaoUrl': localizacaoValue,
         'referencias': _referenciasCtrl.text.trim(),
         'criadoEm': FieldValue.serverTimestamp(),
       });
@@ -322,7 +327,7 @@ class _CadastrarIgrejaScreenState extends State<CadastrarIgrejaScreen> {
                       TextFormField(
                         controller: _localizacaoUrlCtrl,
                         decoration: _dec(
-                          'Link da Localização (Maps)',
+                          'Link da Localização (Maps) — opcional',
                           hint: 'Cole o link do Google Maps (ex.: https://maps.app.goo.gl/....)',
                         ),
                         keyboardType: TextInputType.url,

@@ -59,8 +59,8 @@ if (storePasswordFinal.isEmpty() || keyPasswordFinal.isEmpty()) {
 // --- end keystore helper ---
 
 android {
-    namespace = "com.example.hpcdigital"
-    compileSdk = 35
+    namespace = "com.hpcdigital.app"
+    compileSdk = 36
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -71,10 +71,10 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.hpcdigital"
-        minSdk = 23
-        targetSdk = 35
-        versionCode = 1
+        applicationId = "com.hpcdigital.app"
+        minSdk = flutter.minSdkVersion
+        targetSdk = 36
+        versionCode = project.properties["flutter.versionCode"]?.toString()?.toInt() ?: 4
         versionName = project.properties["flutter.versionName"]?.toString() ?: "1.0.0"
     }
 

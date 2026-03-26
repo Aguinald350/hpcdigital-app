@@ -2,7 +2,7 @@ name: hpcdigital
 description: "Hinário Digital Hosana – HPC Digital com painel admin desktop"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.0+4
 
 environment:
   sdk: ^3.7.0
@@ -22,7 +22,7 @@ dependencies:
 
   connectivity_plus: ^6.0.3
   internet_connection_checker_plus: ^2.2.0
-  intl: ^0.19.0
+  intl: ^0.20.0
   table_calendar: ^3.0.9
   url_launcher: ^6.3.0
   google_maps_flutter: ^2.6.1
@@ -32,13 +32,14 @@ dependencies:
   hive_flutter: ^1.1.0
   flutter_localizations:
     sdk: flutter
+  cloud_functions: ^6.0.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
   hive_generator: ^2.0.1
-  build_runner: ^2.4.14
+  build_runner: ^2.4.13
   flutter_launcher_icons: ^0.14.4   # 👉 coloque em dev_dependencies
   msix: ^3.16.7
 

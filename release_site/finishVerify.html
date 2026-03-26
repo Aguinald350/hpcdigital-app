@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Confirmação de Email — HPC Digital</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+</head>
+<body style="font-family:Arial,Helvetica,sans-serif;max-width:720px;margin:40px auto;">
+<h2>Verificação de Email</h2>
+<div id="status">A processar...</div>
+
+<p id="hint" style="color:#666">Se abriste esta página manualmente, cola aqui o código (oobCode) recebido no link:</p>
+<input id="codeInput" style="width:100%;padding:8px;box-sizing:border-box" placeholder="Cole aqui o oobCode (opcional)"/>
+<button id="btnApply" style="margin-top:8px;padding:8px 12px">Aplicar código</button>
+<hr/>
+
+<!-- Firebase SDKs compat (simples) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script>
+    // CONFIG: substitui pelo firebaseConfig do teu projeto (copia do Console)
+    const firebaseConfig = {
+      apiKey: "AIzaSyBY5XiDRceLqCdMlt2M4FbkTphtEKXUtGI",
+      authDomain: "hpcmobile-9ec3e.firebaseapp.com",
+      projectId: "hpcmobile-9ec3e",
+      storageBucket: "hpcmobile-9ec3e.appspot.com",
+      messagingSenderId: "7719808461",
+      appId: "1:7719808461:web:feb8c3b050874fe71f2884"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    const statusEl = document.getElementById('status');
+    const codeInput = document.getElementById('codeInput');
+    const btnApply = document.getElementById('btnApply');
+
+    function readParams() {
+      const params = new URLSearchParams(window.location.search);
+      return { oobCode: params.get('oobCode'), mode: params.get('mode') || params.get('oobMode') || null };
+    }
+
+    async function applyCode(oobCode) {
+      if (!oobCode) {
+        statusEl.innerText = 'Código inválido. Gera o link com a função ou cola o oobCode aqui.';
+        return;
+      }
+      statusEl.innerText = 'Confirmando...';
+      try {
+        await auth.applyActionCode(oobCode);
+        statusEl.innerHTML = '<strong>Email confirmado com sucesso.</strong><p>Podes agora fazer login normalmente.</p>';
+      } catch (err) {
+        // mensagem útil para debugging
+        statusEl.innerHTML = '<strong>Erro ao confirmar email:</strong> ' + (err.message || JSON.stringify(err));
+        console.error('applyActionCode error:', err);
+      }
+    }
+
+    // Tenta aplicar o código vindo da query string (oobCode)
+    (function tryFromUrl() {
+      const { oobCode, mode } = readParams();
+      if (!oobCode) {
+        statusEl.innerText = 'Nenhum oobCode encontrado na URL. Cola o código manualmente se o tiveres.';
+        return;
+      }
+      // Alguns links tem mode=verifyEmail ou mode=action — tratamos igual
+      applyCode(oobCode);
+    })();
+
+    // botão para testar manualmente (colar oobCode)
+    btnApply.addEventListener('click', () => {
+      const val = codeInput.value.trim();
+      if (!val) {
+        alert('Cole o oobCode no campo acima.');
+        return;
+      }
+      applyCode(val);
+    });
+</script>
+</body>
+</html>

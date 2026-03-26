@@ -1,3 +1,4 @@
+// lib/admin/admin_panel_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -5,6 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 // ====== SUAS TELAS EXISTENTES ======
 import 'package:hpcdigital/admin/users/admin_requisicoes_screen.dart';
 import 'package:hpcdigital/admin/users/admin_user_list_screen.dart';
+import 'package:hpcdigital/admin/users/admin_unverified_users_screen.dart'; // <--- NOVO
+import 'package:hpcdigital/admin/users/generate_verification_link_screen.dart';
 import '../screens/LoginScreen.dart';
 import '../utils/popular_oracoes.dart'; // (mantido se você usa em outro lugar)
 import 'AdminVerHinosScreen.dart';
@@ -159,9 +162,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                             _sidebarCollapsed = !_sidebarCollapsed;
                           }),
                           icon: Icon(
-                            _sidebarCollapsed
-                                ? Icons.chevron_right
-                                : Icons.chevron_left,
+                            _sidebarCollapsed ? Icons.chevron_right : Icons.chevron_left,
                           ),
                         ),
                     ],
@@ -242,8 +243,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                              const SelecionarLinguaScreen(),
+                                              builder: (_) => const SelecionarLinguaScreen(),
                                             ),
                                           );
                                         },
@@ -255,8 +255,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                              const AdminVerHinosScreen(),
+                                              builder: (_) => const AdminVerHinosScreen(),
                                             ),
                                           );
                                         },
@@ -268,8 +267,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                              const CadastrarEventoScreen(),
+                                              builder: (_) => const CadastrarEventoScreen(),
                                             ),
                                           );
                                         },
@@ -281,8 +279,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                              const EventosScreenAdmin(),
+                                              builder: (_) => const EventosScreenAdmin(),
                                             ),
                                           );
                                         },
@@ -294,8 +291,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                              const MinhaIgrejaScreen(),
+                                              builder: (_) => const MinhaIgrejaScreen(),
                                             ),
                                           );
                                         },
@@ -307,8 +303,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                              const VerIgrejasAdminScreen(),
+                                              builder: (_) => const VerIgrejasAdminScreen(),
                                             ),
                                           );
                                         },
@@ -320,8 +315,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                              const CadastrarInformacaoScreen(),
+                                              builder: (_) => const CadastrarInformacaoScreen(),
                                             ),
                                           );
                                         },
@@ -333,8 +327,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                              const VerInformacoesAdminScreen(),
+                                              builder: (_) => const VerInformacoesAdminScreen(),
                                             ),
                                           );
                                         },
@@ -346,8 +339,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                              const CadastrarOracaoScreen(),
+                                              builder: (_) => const CadastrarOracaoScreen(),
                                             ),
                                           );
                                         },
@@ -359,8 +351,19 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                              const AdminUserListScreen(),
+                                              builder: (_) => const AdminUserListScreen(),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      _ActionCard(
+                                        icon: Icons.how_to_reg_outlined,
+                                        title: 'Não Verificados',
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => const AdminUnverifiedUsersScreen(),
                                             ),
                                           );
                                         },
@@ -372,8 +375,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                              const AdminRequisicoesScreen(),
+                                              builder: (_) => const AdminRequisicoesScreen(),
                                             ),
                                           );
                                         },
@@ -442,6 +444,17 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const AdminUserListScreen()),
+                    );
+                  },
+                ),
+                _SideItem(
+                  collapsed: _sidebarCollapsed,
+                  icon: Icons.how_to_reg_outlined,
+                  label: 'Gerar Link', // <--- NOVO
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const GenerateVerificationLinkScreen()),
                     );
                   },
                 ),
@@ -533,6 +546,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const AdminUserListScreen()),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.how_to_reg_outlined),
+              title: const Text('Link de verificacao'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GenerateVerificationLinkScreen()),
               ),
             ),
             ListTile(

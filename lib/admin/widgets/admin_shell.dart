@@ -16,6 +16,7 @@ import '../VerInformacoesAdminScreen.dart';
 import '../CadastrarOracaoScreen.dart';
 import '../users/admin_user_list_screen.dart';
 import '../users/admin_requisicoes_screen.dart';
+import '../users/admin_unverified_users_screen.dart'; // opcional: disponível no menu
 
 /// Rotas do menu lateral
 enum AdminRouteTarget {
@@ -167,7 +168,6 @@ class AdminShell extends StatelessWidget {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const EventosScreenAdmin()));
         break;
       case AdminRouteTarget.minhaIgreja:
-      // já está/irá para cá
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MinhaIgrejaScreen()));
         break;
       case AdminRouteTarget.verIgrejas:

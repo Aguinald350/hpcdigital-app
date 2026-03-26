@@ -103,8 +103,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ? _customIgrejaController.text.trim()
           : _selectedIgreja;
 
-      // 4) Trial de 15 dias
-      final trialEndsAt = Timestamp.fromDate(DateTime.now().add(const Duration(days: 15)));
+      // 4) Trial obrigatório de 7 dias (alterado para 7 dias)
+      final trialEndsAt = Timestamp.fromDate(DateTime.now().add(const Duration(days: 7)));
 
       // 5) Atualiza displayName (opcional, mas útil)
       await user.updateDisplayName(name);
