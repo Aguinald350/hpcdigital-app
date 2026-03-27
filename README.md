@@ -73,9 +73,17 @@ I worked on the development and implementation of the application, including:
 
 ---
 
-## Screenshots
+## 📸 App Screenshots
 
-(Add screenshots here)
+<p align="center">
+  <img src="assets/screenshots/login.png" alt="Login Screen" width="220"/>
+  <img src="assets/screenshots/home.png" alt="Home Screen" width="220"/>
+</p>
+
+<p align="center">
+  <img src="assets/screenshots/events.png" alt="Events Screen" width="220"/>
+  <img src="assets/screenshots/configurations.png" alt="Configurations Screen" width="220"/>
+</p>
 
 ---
 
